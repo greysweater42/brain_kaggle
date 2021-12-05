@@ -41,8 +41,8 @@ class Sartorius(Dataset):
             annotations = train.loc[train.id == id, "annotation"].tolist()
             id_masks = []
             for annotation in annotations:
-                id_masks.append(self._decodeRLE(annotation))
-            mask = np.array(id_masks).sum(0)
+                id_masks.append(rle_decode(annotation, shape=(520, 704)))
+            mask = np.array(id_masks).sum(0).astype(np.int64)
             mask[mask > 1] = 1  # overlapping annotations
             masks[id] = torch.tensor(mask)
 
@@ -60,20 +60,33 @@ class Sartorius(Dataset):
 
         return data
 
-    @staticmethod
-    def _decodeRLE(annotation):
-        size = (520, 704)
-        s = annotation.split(" ")
-        pixels = []
-        for i in range(len(s) // 2):
-            start = int(s[2 * i])
-            increment = int(s[2 * i + 1])
-            for j in range(start, start + increment):
-                pixels.append(j - 1)
-        im_map = np.zeros(size).flatten()
-        im_map[pixels] = 1.0
-        im_map = im_map.reshape(size)
-        return im_map
+
+def rle_encode(img):
+    '''
+    img: numpy array, 1 - mask, 0 - background
+    Returns run length as string formated
+    '''
+    pixels = img.flatten()
+    pixels = np.concatenate([[0], pixels, [0]])
+    runs = np.where(pixels[1:] != pixels[:-1])[0] + 1
+    runs[1::2] -= runs[::2]
+    return ' '.join(str(x) for x in runs)
+ 
+def rle_decode(mask_rle, shape):
+    '''
+    mask_rle: run-length as string formated (start length)
+    shape: (height,width) of array to return 
+    Returns numpy array, 1 - mask, 0 - background
+
+    '''
+    s = mask_rle.split()
+    starts, lengths = [np.asarray(x, dtype=int) for x in (s[0:][::2], s[1:][::2])]
+    starts -= 1
+    ends = starts + lengths
+    img = np.zeros(shape[0]*shape[1], dtype=np.uint8)
+    for lo, hi in zip(starts, ends):
+        img[lo:hi] = 1
+    return img.reshape(shape)
 
 
 def encodeRLE(p, labels):
