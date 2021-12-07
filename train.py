@@ -7,23 +7,13 @@ import numpy as np
 import torchvision.transforms as transforms
 
 
-train = Sartorius()
+t = transforms.RandomCrop((256, 256))
+train = Sartorius(transform=t)
 
-im, l = train[0]
-tr(im).shape
-tr(l)
-l
-
-# https://github.com/pytorch/vision/issues/9#issuecomment-789308878
-t = transforms.RandomRotation(degrees=360)
-state = torch.get_rng_state()
-x = t(x)
-torch.set_rng_state(state)
-y = t(y)
-
-tr = transforms.RandomCrop((256, 256))
+# %%
 loader_args = dict(batch_size=1, num_workers=2, pin_memory=True)
-train_loader = DataLoader(train, shuffle=True, , transforms=tr, **loader_args)
+train_loader = DataLoader(train, shuffle=True, **loader_args)
+
 # %%
 from PIL import Image
 import requests
@@ -46,14 +36,7 @@ model = smp.Unet(
     classes=2,
 )
 model.to(device)
-tr = transforms.Compose([
-    transforms.Resize((512, 512)),
-    transforms.ToTensor()
-])
 
-tr(img)
-
-im = tr(img)
 images = im.to(device=device, dtype=torch.float32)
 # %%
 images = images.unsqueeze(0)
@@ -61,17 +44,5 @@ images
 model(images).shape
 
 
-images
-images = torch.cat((torch.zeros((1, 1, 10, 704)).to("cuda"), images), dim=2)
-images.shape
-
-images.shape
-model(images[:,:,:,:700])
-enc = model.encoder(images)
-
-images[:,:,:519].shape
-
 from segmentation_models_pytorch.encoders import get_preprocessing_fn
-
 preprocess_input = get_preprocessing_fn('resnet34', pretrained='imagenet')
-preprocess_input(images[0].to("cpu"))
